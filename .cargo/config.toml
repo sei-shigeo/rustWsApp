@@ -1,0 +1,35 @@
+# Cargoのカスタムエイリアス設定
+
+[alias]
+# 開発サーバーを起動（Dioxus）
+dev = "run --bin rust-ws-app"
+
+# テスト実行
+t = "test"
+
+# すべてのテストを実行（詳細表示）
+test-all = "test -- --nocapture"
+
+# フォーマット
+fmt = "fmt --all"
+
+# リンター（コードチェック）
+lint = "clippy --all-targets --all-features -- -D warnings"
+
+# フォーマット + リント
+check-all = "clippy --all-targets --all-features -- -D warnings"
+
+# 高速チェック（コンパイルのみ）
+c = "check"
+
+# リリースビルド
+release = "build --release"
+
+# クリーンアップ
+clean = "clean"
+
+# 依存関係の更新
+up = "update"
+
+# 依存関係のツリー表示
+tree = "tree"
