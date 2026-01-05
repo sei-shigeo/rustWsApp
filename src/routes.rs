@@ -1,4 +1,4 @@
-use crate::modules::employees::EmployeePage;
+use crate::{components::search_bar::SearchBar, modules::employees::EmployeePage};
 use dioxus::prelude::*;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
@@ -29,7 +29,15 @@ pub fn Base() -> Element {
 
                 Navbar { show_menu }
             }
-            div { class: "flex-1", Outlet::<Route> {} }
+            div { class: "flex-1",
+
+                // Main Header
+                div { class: "p-4 border-b border-gray-300 flex items-center",
+                    SearchBar {}
+                }
+                Outlet::<Route> {}
+
+            }
         }
     }
 }
