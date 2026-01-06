@@ -14,16 +14,15 @@ pub fn EmployeePage() -> Element {
         div { class: "h-full",
             div { class: "p-2 text-right",
                 button {
-                    class: "font-bold py-2 px-4 rounded",
-                    class: if show_create() { "bg-blue-300 hover:bg-blue-400 text-white" } else { "bg-amber-300 hover:bg-amber-400 text-black" },
+                    class: "font-bold py-2 px-4 rounded bg-amber-300 hover:bg-amber-400 text-black",
                     onclick: move |_| show_create.toggle(),
                     span { if show_create() { "閉じる" } else { "新規登録" } },
                 }
             }
             div { class: "flex h-full",
-                // show list
+                // Main Content
                 div { class: "bg-green-50 flex-1 p-4",
-                    h2 { class: "text-2xl  font-bold mb-4", "従業員一覧" }
+                    h2 { class: "text-xl  font-bold mb-4", "従業員一覧" }
 
                     match &*employees.read_unchecked() {
                         Some(Ok(list)) => {
@@ -61,6 +60,7 @@ pub fn EmployeePage() -> Element {
                         },
                     }
                 }
+                // Create Employee Form
                 div {
                     class: "flex-none bg-gray-50 transition-all duration-300",
                     class: if show_create() { "w-1/2" } else { "w-0 opacity-0" },
