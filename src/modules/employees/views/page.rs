@@ -1,5 +1,5 @@
 use super::create::EmployeeCreate;
-use super::edit::EmployeeItem;
+use super::edit::{EmployeeEdit, EmployeeItem};
 use crate::modules::employees::handlers::get_employees;
 use dioxus::prelude::*;
 
@@ -20,7 +20,7 @@ pub fn EmployeePage() -> Element {
                 }
             }
             div { class: "flex h-full",
-                // Main Content
+                // Main Content: 従業員一覧
                 div { class: "bg-green-50 flex-1 p-4",
                     h2 { class: "text-xl  font-bold mb-4", "従業員一覧" }
 
@@ -60,11 +60,38 @@ pub fn EmployeePage() -> Element {
                         },
                     }
                 }
-                // Create Employee Form
+
+                // Right panel: Create または Edit を切り替える
                 div {
                     class: "flex-none bg-gray-50 transition-all duration-300",
                     class: if show_create() { "w-1/2" } else { "w-0 opacity-0" },
-                    EmployeeCreate { on_created: move |_| employees.restart() }
+
+                    // editing_id が設定されているときは編集フォームを表示する
+                    if editing_id().is_some() {
+                        // editing_id() は Option<i32> を返すので unwrap() を使って中身を取得します。
+                        // rsx! マクロのパースを壊さないように、内部で明示的に rsx! を使って子要素を返しています。
+                        let id = editing_id();
+                        match &*employees.read_unchecked() {
+                            Some(Ok(list)) => {
+                                // リストから該当従業員を探して Edit コンポーネントへ渡す
+                                let emp_opt = list.clone().into_iter().find(|e| e.id == id.unwrap());
+                                if let Some(emp) = emp_opt {
+                                    EmployeeEdit {
+                                        employee: emp,
+                                        on_close: move |_| editing_id.set(None),
+                                        on_refresh: move |_| employees.restart(),
+                                    }
+                                } else {
+                                    rsx! { div { class: "p-4 text-center text-gray-600", "従業員が見つかりません" } }
+                                }
+                            }
+                            Some(Err(_)) => rsx! { div { class: "p-4 text-center text-gray-600", "データ読み取りエラー" } },
+                            None => rsx! { div { class: "p-4 text-center text-gray-600", "読み込み中..." } },
+                        }
+                    } else {
+                        // editing_id が None のときは新規作成フォームを表示
+                        EmployeeCreate { on_created: move |_| employees.restart() }
+                    }
                 }
             }
         }
