@@ -23,6 +23,7 @@ pub fn EmployeePage() -> Element {
                     if let Some(emp) = emp_opt {
                         rsx! {
                             EmployeeEdit {
+                                key: "{emp.id}",
                                 employee: emp,
                                 on_close: move |_| { editing_id.set(None); show_create.set(false); },
                                 on_refresh: move |_| employees.restart(),
@@ -47,7 +48,15 @@ pub fn EmployeePage() -> Element {
             div { class: "p-2 text-right",
                 button {
                     class: "font-bold py-2 px-4 rounded bg-amber-300 hover:bg-amber-400 text-black",
-                    onclick: move |_| show_create.toggle(),
+                    onclick: move |_| {
+                        // トグルで右パネルを開く／閉じる。
+                        // 「開く」側になったときは編集中の ID をクリアして
+                        // edit フォームが表示されないようにする。
+                        show_create.set(!show_create());
+                        if show_create() {
+                            editing_id.set(None);
+                        }
+                    },
                     span { if show_create() { "閉じる" } else { "新規登録" } },
                 }
             }
@@ -72,6 +81,7 @@ pub fn EmployeePage() -> Element {
                                                 key: "{employee.id}",
                                                 employee,
                                                 editing_id,
+                                                show_create,
                                                 on_refresh: move |_| employees.restart(),
                                             }
                                         }

@@ -5,20 +5,24 @@ use crate::modules::employees::models::Employee;
 use crate::modules::employees::validation::{validate_employee_code, validate_employee_name};
 use dioxus::prelude::*;
 
-/// 従業員一覧のアイテム（表示専用）
-/// - 編集・削除ボタンは削除しました
-/// - クリックすると右パネルの編集フォームを開くために `editing_id.set(Some(id))` を呼び出します
+/// 従業員一覧のアイテム（クリックで編集パネルを開く）
 #[component]
 pub fn EmployeeItem(
     employee: Employee,
     editing_id: Signal<Option<i32>>,
+    show_create: Signal<bool>,
     on_refresh: EventHandler<()>,
 ) -> Element {
+    // on_refresh は将来使う可能性があるため受け取っておく（今は未使用）
+    let _ = on_refresh;
+
     rsx! {
-        // 行全体をクリック可能にする。カーソルを pointer にしてわかりやすくする。
         div {
             class: "border p-4 rounded hover:bg-gray-100 cursor-pointer",
-            onclick: move |_| editing_id.set(Some(employee.id)),
+            onclick: move |_| {
+                editing_id.set(Some(employee.id));
+                show_create.set(true);
+            },
             div { class: "flex justify-between items-start gap-4",
                 div {
                     p { class: "text-sm text-gray-500", "ID: {employee.id}" }
@@ -31,7 +35,6 @@ pub fn EmployeeItem(
                         { if employee.is_active { "アクティブ" } else { "非アクティブ" } }
                     }
                 }
-                // 右側に小さなヒントを出す（編集アイコンなどを表示する代わり）
                 div { class: "text-sm text-gray-400", "クリックで編集" }
             }
         }
@@ -39,42 +42,37 @@ pub fn EmployeeItem(
 }
 
 /// 右パネルで使う編集フォームコンポーネント
-/// - 保存と削除の両方を提供します
 #[component]
 pub fn EmployeeEdit(
     employee: Employee,
     on_close: EventHandler<()>,
     on_refresh: EventHandler<()>,
 ) -> Element {
-    // フォームのローカル state
-    let employee_code = use_signal(|| employee.employee_code.clone().unwrap_or_default());
-    let first_name = use_signal(|| employee.first_name.clone());
-    let last_name = use_signal(|| employee.last_name.clone());
-    let is_active = use_signal(|| employee.is_active);
+    // ローカル state (mut にして set() を呼べるようにする)
+    let mut employee_code = use_signal(|| employee.employee_code.clone().unwrap_or_default());
+    let mut first_name = use_signal(|| employee.first_name.clone());
+    let mut last_name = use_signal(|| employee.last_name.clone());
+    let mut is_active = use_signal(|| employee.is_active);
 
-    // エラーメッセージやトースト
-    let employee_code_error = use_signal(|| None::<String>);
-    let first_name_error = use_signal(|| None::<String>);
-    let last_name_error = use_signal(|| None::<String>);
+    // エラー・トースト
+    let mut employee_code_error = use_signal(|| None::<String>);
+    let mut first_name_error = use_signal(|| None::<String>);
+    let mut last_name_error = use_signal(|| None::<String>);
     let success_message = use_signal(|| None::<String>);
 
-    // 変更やエラーの判定
-    let has_changes = move || {
-        employee_code() != employee.employee_code.clone().unwrap_or_default()
-            || first_name() != employee.first_name
-            || last_name() != employee.last_name
-            || is_active() != employee.is_active
-    };
+    // 変更 / エラー判定（bool）
+    let has_changes = employee_code() != employee.employee_code.clone().unwrap_or_default()
+        || first_name() != employee.first_name
+        || last_name() != employee.last_name
+        || is_active() != employee.is_active;
 
-    let has_error = move || {
-        employee_code_error().is_some()
-            || first_name_error().is_some()
-            || last_name_error().is_some()
-    };
+    let has_error = employee_code_error().is_some()
+        || first_name_error().is_some()
+        || last_name_error().is_some();
 
-    // 成功メッセージを自動で消す（3秒）
+    // 成功メッセージを3秒後に消す
     {
-        let success_message = success_message.clone();
+        let mut success_message = success_message;
         use_effect(move || {
             if success_message().is_some() {
                 spawn(async move {
@@ -91,30 +89,33 @@ pub fn EmployeeEdit(
     }
 
     // 保存処理
-    let handle_save = {
-        let employee_code = employee_code.clone();
-        let first_name = first_name.clone();
-        let last_name = last_name.clone();
-        let is_active = is_active.clone();
-        let employee_code_error = employee_code_error.clone();
-        let first_name_error = first_name_error.clone();
-        let last_name_error = last_name_error.clone();
-        let success_message = success_message.clone();
-        let on_refresh = on_refresh.clone();
-        let on_close = on_close.clone();
+    let mut handle_save = {
         let emp_id = employee.id;
+        let employee_code = employee_code;
+        let first_name = first_name;
+        let last_name = last_name;
+        let is_active = is_active;
+        let mut employee_code_error = employee_code_error;
+        let mut first_name_error = first_name_error;
+        let mut last_name_error = last_name_error;
+        let mut success_message = success_message;
+        let on_refresh = on_refresh;
+        let on_close = on_close;
 
         move || {
-            // 事前バリデーション
+            // 現在の値を取得
             let code_val = employee_code();
             let first_val = first_name();
             let last_val = last_name();
+            let active_val = is_active();
 
+            // エラークリア
             employee_code_error.set(None);
             first_name_error.set(None);
             last_name_error.set(None);
             success_message.set(None);
 
+            // バリデーション
             let mut has_err = false;
 
             if let Err(msg) = validate_employee_code(&code_val) {
@@ -129,18 +130,19 @@ pub fn EmployeeEdit(
                 last_name_error.set(Some(msg));
                 has_err = true;
             }
+
             if has_err {
                 return;
             }
 
-            // サーバ更新
+            // 非同期更新
             spawn(async move {
                 match update_employee(
                     emp_id,
                     Some(code_val),
                     first_val.clone(),
                     last_val.clone(),
-                    is_active(),
+                    active_val,
                 )
                 .await
                 {
@@ -160,14 +162,11 @@ pub fn EmployeeEdit(
 
     // 削除処理
     let handle_delete = {
-        let on_refresh = on_refresh.clone();
-        let on_close = on_close.clone();
         let emp_id = employee.id;
+        let on_close = on_close;
+        let on_refresh = on_refresh;
 
-        move |_| {
-            // 簡易確認ダイアログ（ブラウザで実行される前提）
-            // ここは client 側環境で window.confirm を呼びたければ use_effect + web_sys で実装するが、
-            // まずはシンプルに確認なしで削除するか、呼び出し元で確認してから呼ぶ運用でもよい。
+        move || {
             spawn(async move {
                 match delete_employee(emp_id).await {
                     Ok(_) => {
@@ -175,7 +174,6 @@ pub fn EmployeeEdit(
                         on_refresh.call(());
                     }
                     Err(e) => {
-                        // エラーはコンソールへ出す（必要ならトーストに表示）
                         eprintln!("削除エラー: {}", e);
                     }
                 }
@@ -186,7 +184,6 @@ pub fn EmployeeEdit(
     rsx! {
         div { class: "p-4",
             h2 { class: "text-xl font-bold mb-4", "従業員編集" }
-
             form {
                 class: "grid gap-4 mb-4",
                 onsubmit: move |e: Event<FormData>| {
@@ -218,30 +215,25 @@ pub fn EmployeeEdit(
                             oninput: move |e| {
                                 let v = e.value();
                                 employee_code.set(v.clone());
-                                // リアルタイムバリデーションおよび重複チェック
+                                // 簡易バリデーションと重複チェック（非同期）
                                 if let Err(err) = validate_employee_code(&v) {
                                     employee_code_error.set(Some(err));
                                 } else {
+                                    // 非同期で重複チェック（結果は最終的なsubmit時に二重チェック可能）
+                                    let v2 = v.clone();
                                     let emp_id = employee.id;
+                                    let mut employee_code_error = employee_code_error;
                                     spawn(async move {
-                                        match check_employee_code_available(v, Some(emp_id)).await {
-                                            Ok(available) => {
-                                                if !available {
-                                                    // 既存コードと被る
-                                                    // メッセージは編集用の state を使って表示
-                                                } else {
-                                                    // OK: clear any message - we can't set remote signal here due to move,
-                                                    // but we can ignore — caller will revalidate on submit.
-                                                }
-                                            }
-                                            Err(_) => {
-                                                // ネットワークエラーは無視（または軽く扱う）
+                                        if let Ok(available) = check_employee_code_available(v2, Some(emp_id)).await {
+                                            if !available {
+                                                employee_code_error.set(Some("この従業員コードは既に使用されています".to_string()));
                                             }
                                         }
                                     });
+                                    // ここでは先にエラークリア
                                     employee_code_error.set(None);
                                 }
-                            }
+                            },
                         }
                     }
 
@@ -261,7 +253,7 @@ pub fn EmployeeEdit(
                                 } else {
                                     last_name_error.set(None);
                                 }
-                            }
+                            },
                         }
                     }
 
@@ -281,7 +273,7 @@ pub fn EmployeeEdit(
                                 } else {
                                     first_name_error.set(None);
                                 }
-                            }
+                            },
                         }
                     }
 
@@ -301,17 +293,17 @@ pub fn EmployeeEdit(
                 div { class: "flex gap-2 mt-2",
                     button {
                         r#type: "submit",
-                        disabled: move || !has_changes() || has_error(),
-                        class: if has_changes() && !has_error() {
-                            "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                        } else {
+                        disabled: !has_changes || has_error,
+                        class: if !has_changes || has_error {
                             "bg-gray-300 text-gray-500 font-bold py-2 px-4 rounded cursor-not-allowed"
+                        } else {
+                            "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
                         },
                         "保存"
                     }
                     button {
                         r#type: "button",
-                        onclick: handle_delete,
+                        onclick: move |_| handle_delete(),
                         class: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded",
                         "削除"
                     }
