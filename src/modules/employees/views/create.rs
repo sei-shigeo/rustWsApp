@@ -1,201 +1,129 @@
-use crate::modules::employees::handlers::{check_employee_code_available, create_employee};
-use crate::modules::employees::validation::{validate_employee_code, validate_employee_name};
+use crate::components::{Toast, ToastVariant};
+use crate::modules::employees::actions::create_employee_action;
+use crate::modules::employees::components::{EmployeeCodeInput, NameInput};
 use dioxus::prelude::*;
 
-/// 従業員作成フォームコンポーネント
+/// 従業員作成フォームコンポーネント（リファクタ済み）
+///
+/// 目的（初心者向けにコメント多め）:
+/// - 入力 UI は小さなコンポーネントに分割しました（`EmployeeCodeInput`, `NameInput`, `SuccessToast`）。
+/// - このファイルは「Signal を作成して子コンポーネントに渡す」「送信イベントをトリガーする」
+///   という責務だけを持ちます（ビジネスロジックは `actions.rs` に委譲）。
+/// - `Signal` を子コンポーネントに渡すことで、子が `value.set(...)` すると親の状態が変わり、
+///   親と子で状態を共有できます（双方向バインディング的な使い方）。
 #[component]
 pub fn EmployeeCreate(on_created: EventHandler<()>) -> Element {
-    let mut employee_code = use_signal(String::new);
-    let mut first_name = use_signal(String::new);
-    let mut last_name = use_signal(String::new);
-    let mut success_message = use_signal(|| None::<String>);
-    let mut employee_code_error = use_signal(|| None::<String>);
-    let mut first_name_error = use_signal(|| None::<String>);
-    let mut last_name_error = use_signal(|| None::<String>);
+    // --- state: 各フィールドの値 ---
+    // 親コンポーネントが Signal を作り、子コンポーネントへ渡します
+    let employee_code = use_signal(String::new);
+    let first_name = use_signal(String::new);
+    let last_name = use_signal(String::new);
 
-    // 入力があるかチェック
+    // --- state: 各フィールドのエラーメッセージ ---
+    // None => エラー無し、Some(msg) => 表示するエラー文字列
+    let employee_code_error = use_signal(|| None::<String>);
+    let first_name_error = use_signal(|| None::<String>);
+    let last_name_error = use_signal(|| None::<String>);
+
+    // --- 成功メッセージ（トースト） ---
+    // Some(msg) のとき表示する。トーストの自動消去は SuccessToast に任せるか親で管理可能。
+    let success_message = use_signal(|| None::<String>);
+
+    // 入力があるか（登録ボタンの活性判定用）
     let has_input = !first_name().trim().is_empty() && !last_name().trim().is_empty();
 
-    // エラーがあるかチェック
+    // エラーがあるか（ボタンの活性判定用）
     let has_error = employee_code_error().is_some()
         || first_name_error().is_some()
         || last_name_error().is_some();
 
-    // 成功メッセージを3秒後に消す
-    use_effect(move || {
-        if success_message().is_some() {
-            spawn(async move {
-                #[cfg(target_family = "wasm")]
-                gloo_timers::future::sleep(std::time::Duration::from_secs(3)).await;
-
-                #[cfg(not(target_family = "wasm"))]
-                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-
-                success_message.set(None);
-            });
-        }
-    });
-
-    // 送信処理
-    let handle_submit = move |e: Event<FormData>| {
-        e.prevent_default();
-        let first_name_val = first_name();
-        let last_name_val = last_name();
-
-        let employee_code_val = employee_code();
-
-        // エラーメッセージをクリア
-        employee_code_error.set(None);
-        first_name_error.set(None);
-        last_name_error.set(None);
-        success_message.set(None);
-
-        // バリデーション
-        let mut has_error = false;
-
-        if let Err(validation_error) = validate_employee_code(&employee_code_val) {
-            employee_code_error.set(Some(validation_error));
-            has_error = true;
-        }
-
-        if let Err(validation_error) = validate_employee_name(&first_name_val) {
-            first_name_error.set(Some(validation_error));
-            has_error = true;
-        }
-
-        if let Err(validation_error) = validate_employee_name(&last_name_val) {
-            last_name_error.set(Some(validation_error));
-            has_error = true;
-        }
-
-        if has_error {
-            return;
-        }
-
-        spawn(async move {
-            match create_employee(
-                Some(employee_code_val),
-                first_name_val.clone(),
-                last_name_val.clone(),
-            )
-            .await
-            {
-                Ok(employee) => {
-                    success_message.set(Some(format!(
-                        "作成成功: {} {}",
-                        employee.last_name, employee.first_name
-                    )));
-                    employee_code.set(String::new());
-                    first_name.set(String::new());
-                    last_name.set(String::new());
-                    on_created.call(());
-                }
-                Err(e) => {
-                    first_name_error.set(Some(format!("エラー: {}", e)));
-                }
-            }
-        });
+    // SuccessToast に自動で閉じるように頼むためのハンドラを作る
+    // EventHandler::new により、子コンポーネント（SuccessToast）から呼べるコールバックを渡します。
+    // ここでは呼ばれたら success_message を None にしてトーストを消します。
+    // note: clone した Signal を .set するため mutable binding が必要になる場合があります
+    let on_toast_dismiss = {
+        // .set を呼ぶのでミュータブルにします（Signal は Copy のため clone は不要）
+        let mut success_message = success_message;
+        EventHandler::new(move |_| {
+            success_message.set(None);
+        })
     };
 
-    // 各フィールド用のハンドラーを生成
-    let create_name_handler = |mut name: Signal<String>, mut error: Signal<Option<String>>| {
+    // 送信ボタン押下時のハンドラ
+    let handle_submit = {
+        // クローンした Signal をクロージャに移す（move）
+        // ここで .set を呼ぶために mutable なバインディングにする必要があります。
+        // Signal や EventHandler は Copy であることが多いため clone は不要です — そのまま使います。
+        let mut employee_code = employee_code;
+        let mut first_name = first_name;
+        let mut last_name = last_name;
+        let mut employee_code_error = employee_code_error;
+        let mut first_name_error = first_name_error;
+        let mut last_name_error = last_name_error;
+        let mut success_message = success_message;
+        let on_created = on_created;
+
         move |e: Event<FormData>| {
-            let value = e.value();
-            name.set(value.clone());
-            error.set(if value.trim().is_empty() {
+            // デフォルトのフォーム送信を防ぐ（ページリロード等を防止）
+            e.prevent_default();
+
+            // 値を取得（Signal の現在値をクローン）
+            let code_opt = if employee_code().trim().is_empty() {
                 None
             } else {
-                validate_employee_name(&value).err()
+                Some(employee_code())
+            };
+            let f = first_name();
+            let l = last_name();
+
+            // 事前に表示中のエラーをクリア
+            employee_code_error.set(None);
+            first_name_error.set(None);
+            last_name_error.set(None);
+            success_message.set(None);
+
+            // 非同期で actions の create アクションを呼ぶ（UI をブロックしない）
+            spawn(async move {
+                // create_employee_action はクライアント側の簡易バリデーションも行い、
+                // サーバーの create_employee を呼びます。戻り値は Result<Employee, String>。
+                match create_employee_action(code_opt, f.clone(), l.clone()).await {
+                    Ok(employee) => {
+                        // 成功時の処理:
+                        // - 成功メッセージを表示
+                        // - 入力フィールドをリセット
+                        // - 親に作成完了イベントを通知（リスト更新など）
+                        success_message.set(Some(format!(
+                            "作成成功: {} {}",
+                            employee.last_name, employee.first_name
+                        )));
+                        employee_code.set(String::new());
+                        first_name.set(String::new());
+                        last_name.set(String::new());
+
+                        // on_created は親が渡した EventHandler
+                        on_created.call(());
+                    }
+                    Err(err) => {
+                        // サーバーエラー等を個別フィールドのエラーにマッピングすることもできます。
+                        // ここでは単純に first_name_error に表示していますが、必要に応じてパースして振り分けてください。
+                        first_name_error.set(Some(format!("エラー: {}", err)));
+                    }
+                }
             });
         }
     };
 
-    let handle_first_name = create_name_handler(first_name, first_name_error);
-    let handle_last_name = create_name_handler(last_name, last_name_error);
+    // UI のレンダリング
     rsx! {
         div { class: "p-4",
-            h3 { class: "text-xl font-bold mb-4", "新規従業員登録" }
+            h2 { class: "text-xl font-bold mb-4", "新規従業員登録" }
 
             form { class: "grid gap-4 mb-4", onsubmit: handle_submit,
-
                 div { class: "grid gap-2",
-
-                    label { class: "grid gap-0.5",
-                        span { class: "ml-2 font-bold", "従業員コード:"
-                            if let Some(msg) = employee_code_error() {
-                                span { class: "ml-2 text-red-600 text-sm font-normal", "{msg}" }
-                            }
-                        }
-                        input {
-                            class: "border border-gray-400 rounded py-2 px-4 w-full outline-amber-300",
-                            r#type: "text",
-                            name: "employee_code",
-                            placeholder: "EMP001",
-                            value: "{employee_code}",
-                            oninput: move |e: Event<FormData>| {
-                                let value = e.value();
-                                employee_code.set(value.clone());
-
-                                // リアルタイムバリデーション
-                                if let Err(err) = validate_employee_code(&value) {
-                                    employee_code_error.set(Some(err));
-                                } else {
-                                    // 形式OKなら重複チェック
-                                    spawn(async move {
-                                        match check_employee_code_available(value, None).await {
-                                            Ok(available) => {
-                                                if !available {
-                                                    employee_code_error.set(Some(
-                                                        "この従業員コードは既に使用されています".to_string()
-                                                    ));
-                                                } else {
-                                                    employee_code_error.set(None);
-                                                }
-                                            }
-                                            Err(_) => {
-                                                // ネットワークエラーは無視
-                                                employee_code_error.set(None);
-                                            }
-                                        }
-                                    });
-                                }
-                            }
-                        }
-                    }
-
-                    label { class: "grid gap-0.5",
-                        span { class: "ml-2 font-bold", "姓:"
-                            if let Some(msg) = last_name_error() {
-                                span { class: "ml-2 text-red-600 text-sm font-normal", "{msg}" }
-                            }
-                        }
-                        input {
-                            class: "border border-gray-400 rounded py-2 px-4 w-full outline-amber-300",
-                            r#type: "text",
-                            name: "last_name",
-                            placeholder: "山田",
-                            value: "{last_name}",
-                            required: true,
-                            oninput: handle_last_name
-                        }
-                    }
-
-                    label { class: "grid gap-0.5",
-                        span { class: "ml-2 font-bold", "名:",
-                            if let Some(msg) = first_name_error() {
-                                span { class: "ml-2 text-red-600 text-sm font-normal", "{msg}" }
-                            }
-                        }
-                        input {
-                            class: "border border-gray-400 rounded py-2 px-4 w-full outline-amber-300",
-                            r#type: "text",
-                            name: "first_name",
-                            placeholder: "太郎",
-                            value: "{first_name}",
-                            required: true,
-                            oninput: handle_first_name
-                        }
-                    }
+                    // 子コンポーネントに Signal を渡すことで双方向バインディングが可能
+                    EmployeeCodeInput { value: employee_code, error: employee_code_error, exclude_id: None }
+                    NameInput { value: last_name, error: last_name_error, label: "姓".to_string(), placeholder: "山田".to_string() }
+                    NameInput { value: first_name, error: first_name_error, label: "名".to_string(), placeholder: "太郎".to_string() }
                 }
 
                 button {
@@ -211,11 +139,11 @@ pub fn EmployeeCreate(on_created: EventHandler<()>) -> Element {
                 }
             }
 
-            // 成功時に画面に表示される
+            // 成功メッセージは SuccessToast コンポーネントで表示
+            // - 第2引数: duration を Some(3) にして 3 秒で自動閉じするように指示します
+            // - 第3引数: on_dismiss を渡して閉じられたときに親（このコンポーネント）が state をクリアするようにします
             if let Some(msg) = success_message() {
-                div { class: "p-2 rounded absolute top-4 right-4 bg-green-100 text-green-800",
-                    "{msg}"
-                }
+                Toast { message: msg, duration: Some(3), on_dismiss: Some(on_toast_dismiss), variant: Some(ToastVariant::Success) }
             }
         }
     }
