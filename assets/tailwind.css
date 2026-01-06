@@ -591,13 +591,6 @@
       }
     }
   }
-  .hover\:bg-yellow-700 {
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-yellow-700);
-      }
-    }
-  }
 }
 @property --tw-border-style {
   syntax: "*";
