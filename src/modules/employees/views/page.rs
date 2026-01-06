@@ -1,5 +1,6 @@
 use super::create::EmployeeCreate;
 use super::edit::{EmployeeEdit, EmployeeItem};
+use super::right_panel::RightPanel;
 use crate::modules::employees::handlers::get_employees;
 use dioxus::prelude::*;
 
@@ -104,11 +105,8 @@ pub fn EmployeePage() -> Element {
                 }
 
                 // Right panel: Create または Edit を切り替える
-                div {
-                    class: "flex-none bg-gray-50 transition-all duration-300",
-                    class: if show_create() { "w-1/2" } else { "w-0 opacity-0" },
-
-                    // ここでは事前に作成した要素を挿入する（rsx! 内で複雑な let や control flow を書かない）
+                RightPanel {
+                    show: show_create,
                     { right_panel }
                 }
             }

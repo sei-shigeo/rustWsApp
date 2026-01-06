@@ -432,9 +432,6 @@
   .bg-red-500 {
     background-color: var(--color-red-500);
   }
-  .bg-yellow-500 {
-    background-color: var(--color-yellow-500);
-  }
   .p-2 {
     padding: calc(var(--spacing) * 2);
   }
@@ -588,13 +585,6 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-red-700);
-      }
-    }
-  }
-  .hover\:bg-yellow-700 {
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-yellow-700);
       }
     }
   }
