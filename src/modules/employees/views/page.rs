@@ -1,5 +1,5 @@
 use super::create::EmployeeCreate;
-use super::edit::{EmployeeEdit, EmployeeItem};
+use super::edit::EmployeeEdit;
 use super::right_panel::RightPanel;
 use crate::modules::employees::handlers::get_employees;
 use dioxus::prelude::*;
@@ -26,8 +26,8 @@ pub fn EmployeePage() -> Element {
                             EmployeeEdit {
                                 key: "{emp.id}",
                                 employee: emp,
-                                on_close: move |_| { editing_id.set(None); show_create.set(false); },
-                                on_refresh: move |_| employees.restart(),
+                                on_close: move |()| { editing_id.set(None); show_create.set(false); },
+                                on_refresh: move |()| employees.restart(),
                             }
                         }
                     } else {
@@ -40,7 +40,7 @@ pub fn EmployeePage() -> Element {
                 None => rsx! { div { class: "p-4 text-center text-gray-600", "読み込み中..." } },
             }
         } else {
-            rsx! { EmployeeCreate { on_created: move |_| employees.restart() } }
+            rsx! { EmployeeCreate { on_created: move |()| employees.restart() } }
         }
     };
 
@@ -76,14 +76,14 @@ pub fn EmployeePage() -> Element {
                                         p { class: "text-sm mt-2", "上のフォームから従業員を登録してください" }
                                     }
                                 } else {
-                                    div { class: "grid gap-2",
+                                    div { class: "grid gap-2 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]",
                                         for employee in employees_list {
-                                            EmployeeItem {
+                                            crate::modules::employees::components::EmployeeItem {
                                                 key: "{employee.id}",
                                                 employee,
                                                 editing_id,
                                                 show_create,
-                                                on_refresh: move |_| employees.restart(),
+                                                on_refresh: move |()| employees.restart(),
                                             }
                                         }
                                     }

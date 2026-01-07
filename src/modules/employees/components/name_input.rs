@@ -1,7 +1,7 @@
 use crate::modules::employees::validation::validate_employee_name;
 use dioxus::prelude::*;
 
-/// NameInput コンポーネント
+/// `NameInput` コンポーネント
 ///
 /// 説明（初心者向けコメントを多めに記載）:
 /// - このコンポーネントは「姓」や「名」のような名前入力フィールドを共通化します。

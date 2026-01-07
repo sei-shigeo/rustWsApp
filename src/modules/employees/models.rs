@@ -1,3 +1,5 @@
+#![allow(clippy::struct_field_names)]
+
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 

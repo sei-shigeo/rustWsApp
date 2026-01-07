@@ -44,7 +44,7 @@ pub fn EmployeeCreate(on_created: EventHandler<()>) -> Element {
     let on_toast_dismiss = {
         // .set を呼ぶのでミュータブルにします（Signal は Copy のため clone は不要）
         let mut success_message = success_message;
-        EventHandler::new(move |_| {
+        EventHandler::new(move |()| {
             success_message.set(None);
         })
     };
@@ -93,8 +93,9 @@ pub fn EmployeeCreate(on_created: EventHandler<()>) -> Element {
                         // - 入力フィールドをリセット
                         // - 親に作成完了イベントを通知（リスト更新など）
                         success_message.set(Some(format!(
-                            "作成成功: {} {}",
-                            employee.last_name, employee.first_name
+                            "作成成功: {last} {first}",
+                            last = employee.last_name,
+                            first = employee.first_name
                         )));
                         employee_code.set(String::new());
                         first_name.set(String::new());
@@ -106,7 +107,7 @@ pub fn EmployeeCreate(on_created: EventHandler<()>) -> Element {
                     Err(err) => {
                         // サーバーエラー等を個別フィールドのエラーにマッピングすることもできます。
                         // ここでは単純に first_name_error に表示していますが、必要に応じてパースして振り分けてください。
-                        first_name_error.set(Some(format!("エラー: {}", err)));
+                        first_name_error.set(Some(format!("エラー: {err}")));
                     }
                 }
             });

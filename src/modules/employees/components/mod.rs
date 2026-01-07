@@ -14,6 +14,8 @@
 */
 
 pub mod code_input;
+pub mod labeled_text_input;
+pub mod list_item;
 pub mod name_input;
 
 // よく使うコンポーネントをフラットに再エクスポートしておくと、呼び出し元が短く書けて便利です。
@@ -23,5 +25,7 @@ pub mod name_input;
 //       アプリ共通の `crate::components` （例: `src/components/toast.rs`）へ移行して
 //       `crate::components::Toast` を使うことを推奨します。そうすることで page が増えたときの保守性が向上します。
 pub use code_input::EmployeeCodeInput;
+pub use labeled_text_input::LabeledTextInput;
+pub use list_item::EmployeeItem;
 pub use name_input::NameInput;
 // SuccessToast は汎用トーストへ移行済み／移行予定のため、ローカルで再エクスポートは行いません。

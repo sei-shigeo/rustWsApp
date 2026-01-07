@@ -23,12 +23,14 @@ pub async fn create_employee_action(
     // === Client-side quick validation ===
     // Validate employee code format if provided.
     if let Some(ref code) = employee_code {
-        validate_employee_code(code).map_err(|e| e.to_string())?;
+        // propagate validation error directly without extra to_string clone
+        validate_employee_code(code)?;
     }
 
     // Validate names (first and last).
-    validate_employee_name(&first_name).map_err(|e| e.to_string())?;
-    validate_employee_name(&last_name).map_err(|e| e.to_string())?;
+    // propagate errors directly (no implicit clone via to_string)
+    validate_employee_name(&first_name)?;
+    validate_employee_name(&last_name)?;
 
     // === Call server function ===
     // The server function will perform the authoritative validation too and persist the data.

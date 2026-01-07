@@ -2,7 +2,7 @@ use crate::modules::employees::handlers::check_employee_code_available;
 use crate::modules::employees::validation::validate_employee_code;
 use dioxus::prelude::*;
 
-/// EmployeeCodeInput コンポーネント
+/// `EmployeeCodeInput` コンポーネント
 ///
 /// 説明（初心者向けコメント多め）:
 /// - 親コンポーネントが管理する `Signal<String>`（`value`）を受け取り、入力変化時に直接更新します。
@@ -61,12 +61,11 @@ pub fn EmployeeCodeInput(
                             // サーバー呼び出し。Ok(true) => 利用可能、Ok(false) => 重複あり
                             match check_employee_code_available(v_clone, exclude).await {
                                 Ok(available) => {
-                                    if !available {
-                                        // 使用できない場合はエラーメッセージをセット
-                                        error_for_spawn.set(Some("この従業員コードは既に使用されています".to_string()));
-                                    } else {
-                                        // 利用可能な場合はエラーをクリア
+                                    // 利用可能な場合はエラーをクリア、そうでなければメッセージをセット
+                                    if available {
                                         error_for_spawn.set(None);
+                                    } else {
+                                        error_for_spawn.set(Some("この従業員コードは既に使用されています".to_string()));
                                     }
                                 }
                                 Err(_) => {

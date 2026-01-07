@@ -7,9 +7,9 @@ use dioxus::prelude::*;
 ///
 /// Usage (in `page.rs`):
 /// rsx! {
-///     RightPanel {
-///         show: show_create,
-///         (right_panel) // pass the previously constructed RSX fragment as children
+///     `RightPanel` {
+///         show: `show_create`,
+///         (`right_panel`) // pass the previously constructed RSX fragment as children
 ///     }
 /// }
 ///
