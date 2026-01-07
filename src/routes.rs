@@ -1,5 +1,9 @@
 use crate::components::Navbar;
-use crate::{components::search_bar::SearchBar, modules::employees::EmployeePage};
+use crate::{
+    components::search_bar::SearchBar, modules::employees::EmployeePage,
+    modules::example::ExampleComponent,
+};
+
 use dioxus::prelude::*;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
@@ -7,16 +11,9 @@ use dioxus::prelude::*;
 pub enum Route {
     #[layout(Base)]
     #[route("/")]
-    Home {},
+    ExampleComponent {},
     #[route("/employees_page")]
     EmployeePage {},
-}
-
-#[component]
-pub fn Home() -> Element {
-    rsx! {
-        h1 { "welcome wsapp" }
-    }
 }
 
 #[component]
