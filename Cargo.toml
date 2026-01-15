@@ -31,4 +31,10 @@ default = ["web", "server"]
 web = ["dioxus/web", "dep:gloo-timers"]
 desktop = ["dioxus/desktop", "dep:tokio"]
 mobile = ["dioxus/mobile"]
-server = ["dioxus/server", "dep:sqlx", "dep:dotenvy", "dep:tokio", "tokio/full"]
+server = [
+    "dioxus/server", 
+    "dep:sqlx", 
+    "dep:dotenvy", 
+    "dep:tokio", 
+    "tokio/full"
+]

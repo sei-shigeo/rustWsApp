@@ -28,15 +28,12 @@ pub async fn check_employee_code_available(
 /// 従業員の作成
 #[server]
 pub async fn create_employee(
-    employee_code: Option<String>,
+    employee_code: String,
     first_name: String,
     last_name: String,
 ) -> Result<Employee, ServerFnError> {
     // サーバー側でもバリデーション
-    // employee_codeがある場合のみバリデーション
-    if let Some(ref code) = employee_code {
-        validate_employee_code(code).map_err(ServerFnError::new)?;
-    }
+    validate_employee_code(&employee_code).map_err(ServerFnError::new)?;
     validate_employee_name(&first_name).map_err(ServerFnError::new)?;
     validate_employee_name(&last_name).map_err(ServerFnError::new)?;
 
@@ -59,16 +56,13 @@ pub async fn create_employee(
 #[server]
 pub async fn update_employee(
     id: i32,
-    employee_code: Option<String>,
+    employee_code: String,
     first_name: String,
     last_name: String,
     is_active: bool,
 ) -> Result<Employee, ServerFnError> {
     // サーバー側でもバリデーション
-    // employee_codeがある場合のみバリデーション
-    if let Some(ref code) = employee_code {
-        validate_employee_code(code).map_err(ServerFnError::new)?;
-    }
+    validate_employee_code(&employee_code).map_err(ServerFnError::new)?;
     validate_employee_name(&first_name).map_err(ServerFnError::new)?;
     validate_employee_name(&last_name).map_err(ServerFnError::new)?;
 

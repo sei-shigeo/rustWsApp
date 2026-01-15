@@ -32,7 +32,7 @@ CREATE TABLE employees (
     mobile VARCHAR(20), -- 携帯電話
 
     -- 雇用情報
-    employee_code VARCHAR(50), -- 社員番号
+    employee_code VARCHAR(50) NOT NULL UNIQUE, -- 社員番号
     start_date DATE, -- 雇用開始日
     end_date DATE, -- 雇用終了日（退職日）
     office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL, -- 所属営業所

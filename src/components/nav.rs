@@ -22,7 +22,7 @@ pub fn Navbar(show_menu: Signal<bool>) -> Element {
             }
             Link {
                 class: "bg-amber-300 hover:bg-amber-400 rounded-md flex items-center p-2",
-                to: crate::routes::Route::Home {},
+                to: crate::routes::Route::Homepage {},
                 svg {
                     view_box: "0 0 24 24",
                     fill: "currentColor",
@@ -33,7 +33,8 @@ pub fn Navbar(show_menu: Signal<bool>) -> Element {
             }
             Link {
                 class: "bg-amber-300 hover:bg-amber-400 rounded-md flex items-center p-2",
-                to: crate::routes::Route::EmployeePage {},
+                to: crate::routes::Route::EmployeesPage {
+                },
                 svg {
                     view_box: "0 0 24 24",
                     fill: "currentColor",

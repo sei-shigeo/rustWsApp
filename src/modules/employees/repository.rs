@@ -1,8 +1,12 @@
+#[cfg(feature = "server")]
 use super::models::Employee;
+#[cfg(feature = "server")]
 use crate::db;
 
+#[cfg(feature = "server")]
 pub struct EmployeeRepository;
 
+#[cfg(feature = "server")]
 impl EmployeeRepository {
     // 従業員コードの重複チェック
     // 使用可能ならtrue、既に使われていたらfalse
@@ -61,7 +65,7 @@ impl EmployeeRepository {
 
     // 従業員の作成
     pub async fn create(
-        employee_code: Option<String>,
+        employee_code: String,
         first_name: String,
         last_name: String,
     ) -> Result<Employee, sqlx::Error> {
@@ -82,7 +86,7 @@ impl EmployeeRepository {
     // 従業員の更新
     pub async fn update(
         id: i32,
-        employee_code: Option<String>,
+        employee_code: String,
         first_name: String,
         last_name: String,
         is_active: bool,

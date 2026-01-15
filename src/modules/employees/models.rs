@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "server", derive(sqlx::FromRow))]
 pub struct Employee {
     pub id: i32,
-    pub employee_code: Option<String>,
+    pub employee_code: String,
     pub first_name: String,
     pub last_name: String,
     pub is_active: bool,
@@ -34,7 +34,7 @@ pub struct EmployeeFull {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub mobile: Option<String>,
-    pub employee_code: Option<String>,
+    pub employee_code: String,
     pub start_date: Option<NaiveDate>,
     pub end_date: Option<NaiveDate>,
     pub office_id: Option<i32>,
@@ -52,7 +52,7 @@ pub struct EmployeeFull {
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreateEmployee {
-    pub employee_code: Option<String>,
+    pub employee_code: String,
     pub first_name: String,
     pub last_name: String,
 }
@@ -62,7 +62,7 @@ pub struct CreateEmployee {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdateEmployee {
     pub id: i32,
-    pub employee_code: Option<String>,
+    pub employee_code: String,
     pub first_name: String,
     pub last_name: String,
     pub is_active: bool,

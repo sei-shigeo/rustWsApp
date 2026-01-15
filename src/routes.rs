@@ -1,8 +1,5 @@
 use crate::components::Navbar;
-use crate::{
-    components::search_bar::SearchBar, modules::employees::EmployeePage,
-    modules::example::ExampleComponent,
-};
+use crate::{components::search_bar::SearchBar, modules::employees::EmployeesPage};
 
 use dioxus::prelude::*;
 
@@ -11,14 +8,22 @@ use dioxus::prelude::*;
 pub enum Route {
     #[layout(Base)]
     #[route("/")]
-    ExampleComponent {},
-    #[route("/employees_page")]
-    EmployeePage {},
+    Homepage {},
+    #[route("/employees")]
+    EmployeesPage {},
+}
+
+#[component]
+pub fn Homepage() -> Element {
+    rsx! {
+        div { class: "p-4", "Welcome to the Homepage!" }
+    }
 }
 
 #[component]
 pub fn Base() -> Element {
     let show_menu = use_signal(|| false);
+
     rsx! {
         div { class: "flex h-screen",
             div {
@@ -30,7 +35,7 @@ pub fn Base() -> Element {
             div { class: "flex-1",
 
                 // Main Header
-                div { class: "p-4 border-b border-gray-300 flex items-center",
+                div { class: "p-2 border-b border-gray-300 grid items-center grid-cols-3 gap-3",
                     SearchBar {}
                 }
                 Outlet::<Route> {}
@@ -39,6 +44,3 @@ pub fn Base() -> Element {
         }
     }
 }
-
-/* Navbar moved to shared component:
-Use `crate::components::Navbar` (defined in `src/components/nav.rs`) instead of the local implementation. */
