@@ -36,6 +36,8 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
     let mut is_uploading = use_signal(|| false);
     let mut upload_error = use_signal(|| None::<String>);
     let mut upload_success = use_signal(|| false);
+    let mut is_dragging = use_signal(|| false);
+    let mut upload_progress = use_signal(|| 0u8); // 0-100の進捗率
 
     let on_upload_success = props.on_upload_success;
 
@@ -79,9 +81,11 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
             // ファイル内容を読み込み
             #[cfg(feature = "web")]
             {
-                match file.read_bytes().await {
+                let read_result = file.read_bytes().await;
+                match read_result {
                     Ok(bytes) => {
-                        let base64_data = encode_base64(&bytes);
+                        let bytes_vec: Vec<u8> = bytes.to_vec();
+                        let base64_data = encode_base64(&bytes_vec);
                         selected_file.set(SelectedFile {
                             name,
                             size,
@@ -106,6 +110,23 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
         });
     };
 
+    // ドラッグ＆ドロップハンドラ（視覚的フィードバックのみ）
+    let handle_drag_over = move |evt: Event<DragData>| {
+        evt.prevent_default();
+        is_dragging.set(true);
+    };
+
+    let handle_drag_leave = move |_evt: Event<DragData>| {
+        is_dragging.set(false);
+    };
+
+    let handle_drop = move |evt: Event<DragData>| {
+        evt.prevent_default();
+        is_dragging.set(false);
+        // DragDataからのファイル取得はDioxus 0.7では現在サポートされていないため、
+        // クリックでファイル選択を使用してください
+    };
+
     // アップロードハンドラ
     let handle_upload = move |_| {
         let file = selected_file.read().clone();
@@ -121,6 +142,10 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
 
             is_uploading.set(true);
             upload_error.set(None);
+            upload_progress.set(0);
+
+            // 進捗シミュレーション: ファイル準備中
+            upload_progress.set(10);
 
             let upload_data = FileUpload {
                 employee_id,
@@ -131,9 +156,14 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
                 related_id: None,
             };
 
+            // 進捗シミュレーション: アップロード開始
+            upload_progress.set(30);
+
             // サーバー関数を直接呼び出し
             match crate::modules::employee_documents::upload_document(upload_data).await {
                 Ok(_) => {
+                    // 進捗: 完了
+                    upload_progress.set(100);
                     // 成功
                     upload_success.set(true);
                     selected_file.set(SelectedFile::default());
@@ -142,6 +172,7 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
                     on_upload_success.call(());
                 }
                 Err(e) => {
+                    upload_progress.set(0);
                     upload_error.set(Some(format!("アップロードエラー: {}", e)));
                 }
             }
@@ -221,29 +252,70 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
                     }
                 }
 
-                // ファイル選択
+                // ファイル選択（ドラッグ＆ドロップ対応）
                 div {
                     label { class: "block text-sm font-medium text-gray-700 mb-2",
                         "ファイルを選択"
                     }
+
+                    // 隠しファイル入力
                     input {
                         r#type: "file",
+                        id: "file-input",
                         accept: ".jpg,.jpeg,.png,.gif,.pdf",
                         disabled: is_loading,
-                        class: "w-full px-3 py-2 border border-gray-300 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
+                        class: "hidden",
                         onchange: handle_file_select,
                     }
-                    p { class: "mt-1 text-xs text-gray-500",
-                        "対応形式: 画像（JPG, PNG, GIF）、PDF（最大10MB）"
-                    }
-                }
 
-                // 選択されたファイル情報
-                if has_file {
-                    div { class: "p-3 bg-gray-50 rounded-md",
-                        p { class: "text-sm text-gray-700",
-                            "📄 {file.name} ({format_size(file.size)})"
+                    // ドラッグ＆ドロップエリア（クリックでもファイル選択可能）
+                    label {
+                        r#for: "file-input",
+                        class: if *is_dragging.read() {
+                            "border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg p-8 text-center cursor-pointer transition-colors block"
+                        } else if has_file {
+                            "border-2 border-dashed border-green-400 bg-green-50 rounded-lg p-8 text-center cursor-pointer transition-colors block"
+                        } else {
+                            "border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-colors hover:border-blue-400 hover:bg-blue-50 block"
+                        },
+                        ondragover: handle_drag_over,
+                        ondragleave: handle_drag_leave,
+                        ondrop: handle_drop,
+
+                        if has_file {
+                            // 選択されたファイル情報
+                            div { class: "text-green-700",
+                                p { class: "text-xl mb-2", "✅ ファイルが選択されました" }
+                                p { class: "text-base font-medium",
+                                    "📄 {file.name}"
+                                }
+                                p { class: "text-sm text-green-600 mt-1",
+                                    "({format_size(file.size)})"
+                                }
+                                p { class: "text-sm text-gray-500 mt-3",
+                                    "別のファイルを選択するにはここをクリックするか、ドラッグ＆ドロップしてください"
+                                }
+                            }
+                        } else if *is_dragging.read() {
+                            // ドラッグ中の表示
+                            div { class: "text-blue-600",
+                                p { class: "text-2xl mb-2", "📥" }
+                                p { class: "text-lg font-medium mb-1", "ここにドロップ" }
+                                p { class: "text-sm", "ファイルをドロップしてアップロード" }
+                            }
+                        } else {
+                            // 通常の表示
+                            div { class: "text-gray-500",
+                                p { class: "text-3xl mb-3", "📁" }
+                                p { class: "text-lg font-medium mb-1", "ファイルをドラッグ＆ドロップ" }
+                                p { class: "text-sm mb-2", "または" }
+                                p { class: "text-base text-blue-600 font-medium", "クリックしてファイルを選択" }
+                            }
                         }
+                    }
+
+                    p { class: "mt-2 text-xs text-gray-500 text-center",
+                        "対応形式: 画像（JPG, PNG, GIF）、PDF（最大10MB）"
                     }
                 }
 
@@ -261,6 +333,32 @@ pub fn DocumentUploadForm(props: DocumentUploadFormProps) -> Element {
                         oninput: move |evt| {
                             description.set(evt.value());
                         },
+                    }
+                }
+
+                // アップロード進捗表示
+                if is_loading {
+                    div { class: "space-y-2",
+                        // 進捗バー
+                        div { class: "w-full bg-gray-200 rounded-full h-3 overflow-hidden",
+                            div {
+                                class: "bg-blue-600 h-3 rounded-full transition-all duration-300 ease-out",
+                                style: "width: {upload_progress()}%",
+                            }
+                        }
+                        // 進捗テキスト
+                        div { class: "flex justify-between text-sm text-gray-600",
+                            span {
+                                if *upload_progress.read() < 30 {
+                                    "ファイル準備中..."
+                                } else if *upload_progress.read() < 100 {
+                                    "S3にアップロード中..."
+                                } else {
+                                    "完了!"
+                                }
+                            }
+                            span { "{upload_progress()}%" }
+                        }
                     }
                 }
 

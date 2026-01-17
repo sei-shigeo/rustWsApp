@@ -1,3 +1,4 @@
+#[cfg(feature = "server")]
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,10 @@ pub struct GuidanceEducationHistory {
     pub expiration_date: Option<NaiveDate>,
     pub instructor_name: Option<String>,
     pub location: Option<String>,
+    #[cfg(feature = "server")]
     pub duration_hours: Option<BigDecimal>,
+    #[cfg(not(feature = "server"))]
+    pub duration_hours: Option<f64>,
     pub content: Option<String>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -29,7 +33,10 @@ pub struct CreateGuidanceEducationHistory {
     pub expiration_date: Option<NaiveDate>,
     pub instructor_name: Option<String>,
     pub location: Option<String>,
+    #[cfg(feature = "server")]
     pub duration_hours: Option<BigDecimal>,
+    #[cfg(not(feature = "server"))]
+    pub duration_hours: Option<f64>,
     pub content: Option<String>,
     pub notes: Option<String>,
 }
@@ -44,7 +51,10 @@ pub struct UpdateGuidanceEducationHistory {
     pub expiration_date: Option<NaiveDate>,
     pub instructor_name: Option<String>,
     pub location: Option<String>,
+    #[cfg(feature = "server")]
     pub duration_hours: Option<BigDecimal>,
+    #[cfg(not(feature = "server"))]
+    pub duration_hours: Option<f64>,
     pub content: Option<String>,
     pub notes: Option<String>,
 }

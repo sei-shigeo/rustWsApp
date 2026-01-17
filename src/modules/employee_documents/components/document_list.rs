@@ -30,6 +30,14 @@ impl CategoryFilter {
     }
 }
 
+/// プレビュー対象のドキュメント情報
+#[derive(Clone, PartialEq)]
+struct PreviewDocument {
+    url: String,
+    filename: String,
+    mime_type: String,
+}
+
 /// ドキュメント一覧表示コンポーネント
 #[component]
 pub fn DocumentList(props: DocumentListProps) -> Element {
@@ -39,6 +47,7 @@ pub fn DocumentList(props: DocumentListProps) -> Element {
     let mut category_filter = use_signal(|| CategoryFilter::All);
     let mut delete_confirm_id = use_signal(|| None::<i32>);
     let mut is_deleting = use_signal(|| false);
+    let mut preview_doc = use_signal(|| None::<PreviewDocument>);
 
     // 初回読み込みと更新トリガー時にドキュメントを取得
     use_effect(move || {
@@ -217,6 +226,28 @@ pub fn DocumentList(props: DocumentListProps) -> Element {
 
                                 // アクションボタン
                                 div { class: "flex items-center gap-2 ml-4",
+                                    // プレビューボタン（画像・PDF対応）
+                                    if let Some(url) = &doc.s3_url {
+                                        if doc.mime_type.as_ref().map(|m| m.starts_with("image/") || m == "application/pdf").unwrap_or(false) {
+                                            button {
+                                                class: "px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors",
+                                                onclick: {
+                                                    let url = url.clone();
+                                                    let filename = doc.filename.clone();
+                                                    let mime_type = doc.mime_type.clone().unwrap_or_default();
+                                                    move |_| {
+                                                        preview_doc.set(Some(PreviewDocument {
+                                                            url: url.clone(),
+                                                            filename: filename.clone(),
+                                                            mime_type: mime_type.clone(),
+                                                        }));
+                                                    }
+                                                },
+                                                "プレビュー"
+                                            }
+                                        }
+                                    }
+
                                     // ダウンロードボタン
                                     if let Some(url) = &doc.s3_url {
                                         a {
@@ -275,6 +306,68 @@ pub fn DocumentList(props: DocumentListProps) -> Element {
                             } else {
                                 "削除"
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // プレビューモーダル
+        if let Some(doc) = preview_doc.read().as_ref() {
+            div {
+                class: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50",
+                onclick: move |_| preview_doc.set(None),
+
+                // モーダルコンテンツ（クリックイベントの伝播を防止）
+                div {
+                    class: "relative max-w-4xl max-h-[90vh] w-full mx-4",
+                    onclick: move |evt| evt.stop_propagation(),
+
+                    // ヘッダー
+                    div { class: "bg-white rounded-t-lg px-4 py-3 flex items-center justify-between",
+                        h4 { class: "text-lg font-semibold text-gray-900 truncate",
+                            "{doc.filename}"
+                        }
+                        button {
+                            class: "text-gray-500 hover:text-gray-700 text-2xl leading-none p-1",
+                            onclick: move |_| preview_doc.set(None),
+                            "×"
+                        }
+                    }
+
+                    // プレビューコンテンツ
+                    div { class: "bg-gray-100 rounded-b-lg overflow-hidden",
+                        if doc.mime_type.starts_with("image/") {
+                            // 画像プレビュー
+                            div { class: "flex items-center justify-center p-4 max-h-[75vh] overflow-auto",
+                                img {
+                                    src: "{doc.url}",
+                                    alt: "{doc.filename}",
+                                    class: "max-w-full max-h-[70vh] object-contain rounded shadow-lg",
+                                }
+                            }
+                        } else if doc.mime_type == "application/pdf" {
+                            // PDFプレビュー
+                            iframe {
+                                src: "{doc.url}",
+                                class: "w-full h-[75vh] border-0",
+                                title: "{doc.filename}",
+                            }
+                        }
+                    }
+
+                    // フッター（アクションボタン）
+                    div { class: "bg-white rounded-b-lg px-4 py-3 flex justify-end gap-3 border-t",
+                        a {
+                            href: "{doc.url}",
+                            target: "_blank",
+                            class: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors",
+                            "新しいタブで開く"
+                        }
+                        button {
+                            class: "px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors",
+                            onclick: move |_| preview_doc.set(None),
+                            "閉じる"
                         }
                     }
                 }

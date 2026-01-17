@@ -76,22 +76,8 @@ pub fn EmployeeFullEditForm(employee: EmployeeFull, on_close: EventHandler<()>) 
                 Ok(_) => {
                     success_message.set("従業員情報を更新しました".to_string());
                     is_submitting.set(false);
-                    // 2秒後に閉じる
-                    #[cfg(feature = "web")]
-                    {
-                        use gloo_timers::future::TimeoutFuture;
-                        spawn(async move {
-                            TimeoutFuture::new(2000).await;
-                            on_close.call(());
-                        });
-                    }
-                    #[cfg(not(feature = "web"))]
-                    {
-                        spawn(async move {
-                            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                            on_close.call(());
-                        });
-                    }
+                    // 更新成功後、親コンポーネントに通知
+                    on_close.call(());
                 }
                 Err(e) => {
                     error_message.set(format!("更新エラー: {}", e));
