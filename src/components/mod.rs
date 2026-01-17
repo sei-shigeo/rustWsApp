@@ -5,4 +5,6 @@ pub mod icon;
 pub mod nav;
 pub mod search_bar;
 
+pub use icon::{Icon, IconType};
 pub use nav::Navbar;
+pub use search_bar::SearchBar;

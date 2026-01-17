@@ -1,21 +1,42 @@
 [application]
+name = "rust-ws-app"
+default_platform = "fullstack"
+
+# 静的ファイルディレクトリ
+asset_dir = "assets"
+
+# Web プラットフォーム設定
+[web]
+target = "web"
 
 [web.app]
-
-# HTML title tag content
 title = "rust-ws-app"
+base_path = "/"
 
-# include `assets` in web platform
+[web.watcher]
+reload_html = true
+watch_path = ["src", "assets"]
+index_on_404 = true
+
 [web.resource]
-
-# Additional CSS style files
 style = []
-
-# Additional JavaScript files
 script = []
 
 [web.resource.dev]
-
-# Javascript code file
-# serve: [dev-server] only
 script = []
+
+# Tailwind CSS設定（オプション - 自動検出されるが明示的に指定も可能）
+[tool.dioxus.tailwind]
+# 入力ファイル（デフォルト: tailwind.css）
+input = "tailwind.css"
+# 出力ファイル（デフォルト: assets/tailwind.css）
+output = "assets/tailwind.css"
+
+# サーバー設定
+[web.server]
+addr = "0.0.0.0"
+port = 8080
+
+[bundle]
+identifier = "com.waseisyouji.rust-ws-app"
+publisher = "WaseiSyouji"

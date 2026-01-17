@@ -6,35 +6,86 @@ edition = "2021"
 
 [dependencies]
 # UIとフルスタック機能（常に必要）
-dioxus = { version = "0.7.2", features = ["router", "fullstack"] }
+# fullstackとrouterの両方が必要
+dioxus = { version = "0.7", features = ["fullstack", "router"] }
+
 # データのやり取りに必要（常に必要）
 serde = { version = "1.0", features = ["derive"] }
+
 # 日付・時刻の処理（常に必要）
 chrono = { version = "0.4", features = ["serde"] }
+
+# アニメーションライブラリ（optional）
+dioxus-motion = { version = "0.3", default-features = false, optional = true }
 
 # Web用の非同期タイマー（optional）
 gloo-timers = { version = "0.3", features = ["futures"], optional = true }
 
 # サーバー側のみの依存関係（optional）
+axum = { version = "0.8", optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+tower = { version = "0.5", optional = true }
+dioxus-cli-config = { version = "0.7", optional = true }
+
+# データベース関連（optional）
 sqlx = { version = "0.8", features = [
     "runtime-tokio",
     "tls-rustls",
     "postgres",
     "macros",
     "chrono",
+    "bigdecimal",
 ], optional = true }
-tokio = { version = "1.49", features = ["time", "rt"], optional = true }
+bigdecimal = { version = "0.4", features = ["serde"], optional = true }
 dotenvy = { version = "0.15", optional = true }
 
+# AWS S3関連（optional）
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+
+# ファイルアップロード関連（optional）
+uuid = { version = "1", features = ["v4", "serde"], optional = true }
+mime = { version = "0.3", optional = true }
+bytes = { version = "1", optional = true }
+base64 = { version = "0.22", optional = true }
+
+# Web API用（optional）
+wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", features = [
+    "File",
+    "FileList",
+    "FileReader",
+    "HtmlInputElement",
+    "Event",
+    "EventTarget",
+], optional = true }
+
 [features]
-default = ["web", "server"]
-web = ["dioxus/web", "dep:gloo-timers"]
-desktop = ["dioxus/desktop", "dep:tokio"]
-mobile = ["dioxus/mobile"]
+default = []
+web = [
+    "dioxus/web",
+    "dep:gloo-timers",
+    "dioxus-motion/web",
+    "dep:bigdecimal",
+    "dep:base64",
+    "dep:wasm-bindgen",
+    "dep:web-sys",
+]
+desktop = ["dioxus/desktop", "dioxus-motion/desktop"]
+mobile = ["dioxus/mobile", "dioxus-motion/desktop"]
 server = [
-    "dioxus/server", 
-    "dep:sqlx", 
-    "dep:dotenvy", 
-    "dep:tokio", 
-    "tokio/full"
+    "dioxus/server",
+    "dep:axum",
+    "dep:tokio",
+    "dep:tower",
+    "dep:dioxus-cli-config",
+    "dep:sqlx",
+    "dep:dotenvy",
+    "dep:bigdecimal",
+    "dep:aws-config",
+    "dep:aws-sdk-s3",
+    "dep:uuid",
+    "dep:mime",
+    "dep:bytes",
+    "dep:base64",
 ]

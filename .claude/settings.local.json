@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "mcp__acp__Bash",
-      "mcp__acp__Edit"
+      "mcp__acp__Edit",
+      "mcp__mcp-server-context7__resolve-library-id",
+      "mcp__mcp-server-context7__query-docs",
+      "mcp__acp__Write"
     ]
   }
 }
